@@ -302,6 +302,27 @@ export const postRouter = createTRPCRouter({
     return ctx.anonymousId;
   }),
 
+  getById: publicProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const post = await ctx.db.post.findUnique({
+        where: { id: input.id },
+        include: {
+          emotionTag: true,
+          stamps: true,
+        },
+      });
+
+      if (!post) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "投稿が見つかりませんでした。",
+        });
+      }
+
+      return post;
+    }),
+
   delete: publicProcedure
     .input(z.object({ postId: z.string() }))
     .mutation(async ({ ctx, input }) => {
