@@ -21,13 +21,11 @@ export function useStampAggregation(stamps: Stamp[]) {
         const stampMap = inputStamps.reduce<StampAggregationMap>(
           (acc, stamp) => {
             const type = stamp.type;
-            if (!acc[type]) {
-              acc[type] = {
-                type,
-                count: 0,
-                stamps: [],
-              };
-            }
+            acc[type] ??= {
+              type,
+              count: 0,
+              stamps: [],
+            };
             acc[type].count += 1;
             acc[type].stamps.push(stamp);
             return acc;
