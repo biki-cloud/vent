@@ -3,6 +3,7 @@ import { PostList } from "~/components/post/PostList";
 import { api } from "~/utils/api";
 import { renderWithProviders } from "~/utils/test-utils";
 import { Filter, SortDesc, SortAsc, RotateCw } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 jest.mock("lucide-react", () => ({
   Loader2: () => <div data-testid="loader-icon" />,
@@ -55,6 +56,14 @@ jest.mock("~/utils/api", () => ({
       },
     },
   },
+}));
+
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: jest.fn(),
+    replace: jest.fn(),
+    prefetch: jest.fn(),
+  }),
 }));
 
 describe("PostList", () => {

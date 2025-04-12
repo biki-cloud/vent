@@ -9,19 +9,11 @@ export function getLogger(component: string) {
     return logger.child({ component });
   }
 
-  // 開発環境では pino-pretty を使用
+  // 開発環境では基本的なpinoロガーを使用
   if (process.env.NODE_ENV === "development") {
     const logger = pino({
       level: "debug",
-      transport: {
-        target: "pino-pretty",
-        options: {
-          colorize: true,
-          translateTime: "SYS:yyyy-mm-dd HH:MM:ss",
-          ignore: "pid,hostname,component",
-          messageFormat: "{component} | {msg}",
-        },
-      },
+      timestamp: () => `,"time":"${new Date(Date.now()).toISOString()}"`,
     });
     return logger.child({ component });
   }

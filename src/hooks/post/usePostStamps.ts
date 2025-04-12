@@ -24,6 +24,7 @@ interface StampInput {
 
 interface StampMutationContext {
   previousPosts: InfiniteData<PostResponse> | undefined;
+  previousPost: RouterOutputs["post"]["getById"] | undefined;
 }
 
 interface StampMutationError {
@@ -52,15 +53,21 @@ export function usePostStamps(
     async onMutate(variables: StampInput) {
       console.log("🚀 onMutate called with variables:", variables);
 
+      // キャッシュの更新を一時停止
       await utils.post.getAll.cancel();
+      await utils.post.getById.cancel();
 
+      // 現在のデータを保存
       const previousPosts = utils.post.getAll.getInfiniteData({
         limit: 10,
         emotionTagId,
         orderBy,
       });
+      const previousPost = utils.post.getById.getData({ id: variables.postId });
+
       console.log("📦 Previous posts state:", previousPosts);
 
+      // 投稿一覧のキャッシュを更新
       utils.post.getAll.setInfiniteData(
         { limit: 10, emotionTagId, orderBy },
         (old) => {
@@ -74,7 +81,6 @@ export function usePostStamps(
                 if (post.id !== variables.postId) return post;
                 console.log("🎯 Updating post with ID:", post.id);
 
-                // 既存のスタンプがあれば削除、なければ追加
                 const existingStamp = post.stamps.find(
                   (s) =>
                     s.type === variables.type && s.anonymousId === clientId,
@@ -111,12 +117,45 @@ export function usePostStamps(
         },
       );
 
-      return { previousPosts };
+      // 投稿詳細のキャッシュを更新
+      utils.post.getById.setData({ id: variables.postId }, (old) => {
+        if (!old) return old;
+
+        const existingStamp = old.stamps.find(
+          (s) => s.type === variables.type && s.anonymousId === clientId,
+        );
+
+        if (existingStamp) {
+          return {
+            ...old,
+            stamps: old.stamps.filter((s) => s.id !== existingStamp.id),
+          };
+        }
+
+        return {
+          ...old,
+          stamps: [
+            ...old.stamps,
+            {
+              id: `temp-${Date.now()}`,
+              type: variables.type,
+              anonymousId: clientId,
+              postId: variables.postId,
+              createdAt: new Date(),
+              native: variables.native,
+            } as Stamp,
+          ],
+        };
+      });
+
+      return { previousPosts, previousPost };
     },
 
     onError(error, variables, context) {
       console.error("❌ Error occurred:", error);
       console.log("🔄 Rolling back to previous state");
+
+      // 投稿一覧を元に戻す
       if (context?.previousPosts) {
         utils.post.getAll.setInfiniteData(
           { limit: 10, emotionTagId, orderBy },
@@ -126,10 +165,24 @@ export function usePostStamps(
           }),
         );
       }
+
+      // 投稿詳細を元に戻す
+      if (context?.previousPost) {
+        utils.post.getById.setData(
+          { id: variables.postId },
+          context.previousPost,
+        );
+      }
     },
 
     onSuccess(data, variables) {
       console.log("✅ Mutation succeeded:", { data, variables });
+    },
+
+    onSettled() {
+      // キャッシュを再検証
+      void utils.post.getAll.invalidate();
+      void utils.post.getById.invalidate();
     },
   });
 
