@@ -7,6 +7,7 @@ import {
 } from "~/components/ui/select";
 import { api } from "~/utils/api";
 import { EMOTION_TAGS } from "~/constants/emotions";
+import type { EmotionTag } from "@prisma/client";
 
 interface EmotionSelectProps {
   selectedId: string;
@@ -27,7 +28,7 @@ export function EmotionSelect({
         <SelectValue placeholder="感情を選択してください" />
       </SelectTrigger>
       <SelectContent>
-        {emotionTags?.map((tag) => {
+        {emotionTags?.map((tag: EmotionTag) => {
           const emotionInfo = EMOTION_TAGS.find((e) => e.name === tag.name);
           return (
             <SelectItem key={tag.id} value={tag.id}>
